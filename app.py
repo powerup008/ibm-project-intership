@@ -18,23 +18,57 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "username" not in st.session_state:
     st.session_state["username"] = ""
-
 def login_screen():
-    st.markdown("### 🔒 Welcome! Please log in.")
+    # --- Custom CSS just for the Login Card ---
+    st.markdown("""
+    <style>
+    /* Give the login form a floating, glass-like appearance */
+    [data-testid="stForm"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    /* Hide the sidebar completely on the login screen */
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.write("") # Spacer to push the card down slightly
+    st.write("") 
+    st.write("")
+
+    # --- Center the login box using columns ---
+    # This creates 3 columns. The middle one (col2) will hold our form.
+    col1, col2, col3 = st.columns([1, 1.5, 1])
     
-    # We use st.form so the user can hit "Enter" to submit
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Login")
+    with col2:
+        st.markdown("<h2 style='text-align: center;'>🔒 Welcome Back!</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #aaaaaa;'>Please log in to create AI posters.</p>", unsafe_allow_html=True)
+        st.write("") # Spacer
         
-        if submit_button:
-            if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
-                st.session_state["logged_in"] = True
-                st.session_state["username"] = username
-                st.rerun()  # Instantly refresh the page to show the app
-            else:
-                st.error("😕 Invalid username or password. Please try again.")
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="e.g., admin")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            
+            # use_container_width=True makes the button span the whole card!
+            submit_button = st.form_submit_button("Login", use_container_width=True)
+            
+            if submit_button:
+                # CLEAN THE INPUTS
+                clean_username = username.strip().lower()
+                clean_password = password.strip()
+                
+                # VERIFY
+                if clean_username in USER_CREDENTIALS and USER_CREDENTIALS[clean_username] == clean_password:
+                    st.session_state["logged_in"] = True
+                    st.session_state["username"] = clean_username
+                    st.rerun()  # Instantly refresh to load the main app
+                else:
+                    st.error("😕 Invalid username or password. Please try again.")
 
 # --- 3. ENFORCE LOGIN ---
 if not st.session_state["logged_in"]:
@@ -233,6 +267,7 @@ with st.sidebar:
                     st.error(f"An error occurred: {e}")
     
     
+
 
 
 
