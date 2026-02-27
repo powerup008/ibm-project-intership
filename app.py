@@ -100,6 +100,12 @@ h1 { color: #ffffff !important; animation: dropIn 1s cubic-bezier(0.25, 1, 0.5, 
 st.markdown(page_bg_css, unsafe_allow_html=True)
 
 # --- Sidebar Controls ---
+st.divider() # Adds a clean line
+    if st.button("🔄 Reset App", use_container_width=True):
+        # Clear the image and the AI generated text
+        st.session_state["ai_text"] = ""
+        # We don't clear "logged_in" because we want them to stay logged in
+        st.rerun()
 with st.sidebar:
     st.success(f"👤 Logged in as: **{st.session_state['username']}**")
     if st.button("Logout"):
@@ -212,3 +218,4 @@ if uploaded_file and st.session_state["ai_text"]:
         
     except Exception as e:
         st.error(f"Image processing error: {e}")
+
