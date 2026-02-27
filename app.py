@@ -13,6 +13,14 @@ with st.sidebar:
     st.header("Settings")
     api_key = st.text_input("Gemini API Key", type="password", help="Get a free key from Google AI Studio")
     design_type = st.selectbox("Design Type", ["Meme", "Event Poster", "Social Media Slogan"])
+    #New : AI Tone Selector
+    ai_tone = st.selectbox("AI Tone", [
+        "Funny & Humorous", 
+        "Sarcastic & Snarky", 
+        "Professional & Clean", 
+        "Inspirational & Epic",
+        "Gen-Z Slang"
+    ])
     
     font_style = st.selectbox("Typography Style", [
         "Meme (Impact, Thick Outline)", 
@@ -110,6 +118,9 @@ if st.button("Generate & Create"):
                 # 1. Generate Caption using Gemini
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel('gemini-2.5-flash')
+                prompt = f"Write a short, catchy, and punchy {design_type} text overlay about: {topic}. The tone of the text MUST BE: {ai_tone}. Return strictly the text, no quotes or extra formatting."
+                
+                response = model.generate_content(prompt)
                 prompt = f"Write a short, catchy, and punchy {design_type} text overlay about: {topic}. Return strictly the text, no quotes or extra formatting."
                 response = model.generate_content(prompt)
                 ai_text = response.text.strip().upper() if "Meme" in font_style else response.text.strip()
@@ -181,3 +192,4 @@ if st.button("Generate & Create"):
             except Exception as e:
 
                 st.error(f"An error occurred: {e}")
+
