@@ -3,32 +3,19 @@ from PIL import Image, ImageDraw, ImageFont
 import google.generativeai as genai
 import io
 import textwrap
-from streamlit_oauth import OAuth2Component
 
 # --- Page Setup ---
 st.set_page_config(page_title="AI Poster Maker", layout="centered")
 st.title("🎨 AI Meme & Poster Creator")
-REDIRECT_URI = "https://AIMeme&PosterCreator.streamlit.app" 
+Here is the exact code block for the "dummy" login system that accepts any input.
 
-try:
-    CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
-    CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
-except KeyError:
-    st.error("⚠️ Google Secrets are missing! Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your secrets.toml or Streamlit Cloud dashboard.")
-    st.stop()
+Where to paste it:
+Paste this immediately below your st.set_page_config(...) line and right above your st.title("🎨 AI Meme & Poster Creator") line.
 
-# Create the Google Login component
-oauth2 = OAuth2Component(
-    CLIENT_ID, 
-    CLIENT_SECRET, 
-    "https://accounts.google.com/o/oauth2/v2/auth", 
-    "https://oauth2.googleapis.com/token", 
-    "https://oauth2.googleapis.com/token", 
-    "https://revoke.googleapis.com/revoke"
-)
-
+The Code:
+Python
 # ==========================================
-# 3. LOGIN SYSTEM LOGIC
+# LOGIN SYSTEM LOGIC (ACCEPTS ANY INPUT)
 # ==========================================
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
@@ -36,34 +23,47 @@ if "username" not in st.session_state:
     st.session_state["username"] = ""
 
 def login_screen():
-    # Hide sidebar on login screen
+    # Style the login card and hide the sidebar
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none; }
+    [data-testid="stForm"] {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
     </style>
     """, unsafe_allow_html=True)
 
     st.write("")
+    st.write("")
+    
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.markdown("<h2 style='text-align: center;'>🔒 Welcome!</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #aaaaaa;'>Please log in to create AI posters.</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #aaaaaa;'>Please enter a nickname to start creating.</p>", unsafe_allow_html=True)
         st.write("")
         
-        # This generates the actual "Login with Google" button
-        result = oauth2.authorize_button(
-            name="Continue with Google",
-            icon="https://www.google.com.vn/images/branding/googleg/1x/googleg_standard_color_128dp.png",
-            redirect_uri=REDIRECT_URI,
-            scope="openid email profile",
-            key="google_login",
-            use_container_width=True
-        )
-        
-        if result and "token" in result:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = "Google User" # They are successfully authenticated!
-            st.rerun()
+        with st.form("login_form"):
+            username = st.text_input("Choose a Username", placeholder="e.g., GuestUser")
+            password = st.text_input("Enter any Password", type="password", placeholder="••••••••")
+            submit_button = st.form_submit_button("Enter App", use_container_width=True)
+            
+            if submit_button:
+                # As long as they typed *something*, let them in!
+                if username.strip() != "" and password.strip() != "":
+                    st.session_state["logged_in"] = True
+                    st.session_state["username"] = username.strip()
+                    st.rerun()
+                else:
+                    st.error("😕 Please type a username and password to continue.")
+
+# ENFORCE LOGIN: Stop the app if not logged in
+if not st.session_state["logged_in"]:
+    login_screen()
+    st.stop()
 
 # ENFORCE LOGIN: Stop the app if not logged in
 if not st.session_state["logged_in"]:
@@ -253,6 +253,7 @@ if not st.session_state["logged_in"]:
                     st.error(f"An error occurred: {e}")
     
     
+
 
 
 
