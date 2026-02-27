@@ -100,12 +100,6 @@ h1 { color: #ffffff !important; animation: dropIn 1s cubic-bezier(0.25, 1, 0.5, 
 st.markdown(page_bg_css, unsafe_allow_html=True)
 
 # --- Sidebar Controls ---
-st.divider() # Adds a clean line
-    if st.button("🔄 Reset App", use_container_width=True):
-        # Clear the image and the AI generated text
-        st.session_state["ai_text"] = ""
-        # We don't clear "logged_in" because we want them to stay logged in
-        st.rerun()
 with st.sidebar:
     st.success(f"👤 Logged in as: **{st.session_state['username']}**")
     if st.button("Logout"):
@@ -127,6 +121,13 @@ with st.sidebar:
     x_pos = st.slider("↔️ Horizontal Position (%)", min_value=0, max_value=100, value=50, help="0 = Left edge, 50 = Center, 100 = Right edge")
     y_pos = st.slider("↕️ Vertical Position (%)", min_value=0, max_value=100, value=75, help="0 = Top, 100 = Bottom")
     text_size = st.slider("🔠 Text Size", min_value=1, max_value=20, value=8, help="Changes how large the font is relative to the image")
+    # This adds a horizontal line to separate the settings from the reset
+    t.divider() 
+    if st.button("🔄 Reset App", use_container_width=True):
+        # Clear the saved AI text from the session
+        st.session_state["ai_text"] = ""
+        # Rerun the app to refresh the screen
+        st.rerun()
 
 # --- Interface ---
 st.write("Upload a background, tell the AI what it's about, and click Generate. Then use the sidebar to move the text!")
@@ -218,4 +219,5 @@ if uploaded_file and st.session_state["ai_text"]:
         
     except Exception as e:
         st.error(f"Image processing error: {e}")
+
 
