@@ -30,8 +30,14 @@ page_bg_css = """
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
 /* Apply font to EVERYTHING in the app */
-* {
-    font-family: 'Roboto', sans-serif !important;
+/* Apply font SAFELY without breaking Streamlit icons */
+html, body, h1, h2, h3, h4, h5, h6, p, label, span, .stMarkdown {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Force restore the Material Icon font just in case */
+.material-symbols-rounded {
+    font-family: 'Material Symbols Rounded' !important;
 }
 
 /* 2. Dark animated background */
@@ -173,4 +179,5 @@ if st.button("Generate & Create"):
                 )
                 
             except Exception as e:
+
                 st.error(f"An error occurred: {e}")
