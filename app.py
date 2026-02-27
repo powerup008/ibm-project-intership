@@ -3,84 +3,72 @@ from PIL import Image, ImageDraw, ImageFont
 import google.generativeai as genai
 import io
 import textwrap
+from streamlit_oauth import OAuth2Component
 
 # --- Page Setup ---
 st.set_page_config(page_title="AI Poster Maker", layout="centered")
 st.title("🎨 AI Meme & Poster Creator")
-# You can add as many users as you want here
-USER_CREDENTIALS = {
-    "admin": "poster123",
-    "john_doe": "meme2026",
-    "guest": "guestpass"
-}
-# Initialize the session state for login
+REDIRECT_URI = "https://AIMeme&PosterCreator.streamlit.app/" 
+
+try:
+    CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
+    CLIENT_SECRET = st.secrets["GOOGLE_CLIENT_SECRET"]
+except KeyError:
+    st.error("⚠️ Google Secrets are missing! Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your secrets.toml or Streamlit Cloud dashboard.")
+    st.stop()
+
+# Create the Google Login component
+oauth2 = OAuth2Component(
+    CLIENT_ID, 
+    CLIENT_SECRET, 
+    "https://accounts.google.com/o/oauth2/v2/auth", 
+    "https://oauth2.googleapis.com/token", 
+    "https://oauth2.googleapis.com/token", 
+    "https://revoke.googleapis.com/revoke"
+)
+
+# ==========================================
+# 3. LOGIN SYSTEM LOGIC
+# ==========================================
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "username" not in st.session_state:
     st.session_state["username"] = ""
+
 def login_screen():
-    # --- Custom CSS just for the Login Card ---
+    # Hide sidebar on login screen
     st.markdown("""
     <style>
-    /* Give the login form a floating, glass-like appearance */
-    [data-testid="stForm"] {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    /* Hide the sidebar completely on the login screen */
-    [data-testid="stSidebar"] {
-        display: none;
-    }
+    [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
-    st.write("") # Spacer to push the card down slightly
-    st.write("") 
     st.write("")
-
-    # --- Center the login box using columns ---
-    # This creates 3 columns. The middle one (col2) will hold our form.
     col1, col2, col3 = st.columns([1, 1.5, 1])
-    
     with col2:
-        st.markdown("<h2 style='text-align: center;'>🔒 Welcome Back!</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🔒 Welcome!</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #aaaaaa;'>Please log in to create AI posters.</p>", unsafe_allow_html=True)
-        st.write("") # Spacer
+        st.write("")
         
-        with st.form("login_form"):
-            username = st.text_input("Username", placeholder="e.g., admin")
-            password = st.text_input("Password", type="password", placeholder="••••••••")
-            
-            # use_container_width=True makes the button span the whole card!
-            submit_button = st.form_submit_button("Login", use_container_width=True)
-            
-            if submit_button:
-                # CLEAN THE INPUTS
-                clean_username = username.strip().lower()
-                clean_password = password.strip()
-                
-                # VERIFY
-                if clean_username in USER_CREDENTIALS and USER_CREDENTIALS[clean_username] == clean_password:
-                    st.session_state["logged_in"] = True
-                    st.session_state["username"] = clean_username
-                    st.rerun()  # Instantly refresh to load the main app
-                else:
-                    st.error("😕 Invalid username or password. Please try again.")
+        # This generates the actual "Login with Google" button
+        result = oauth2.authorize_button(
+            name="Continue with Google",
+            icon="https://www.google.com.vn/images/branding/googleg/1x/googleg_standard_color_128dp.png",
+            redirect_uri=REDIRECT_URI,
+            scope="openid email profile",
+            key="google_login",
+            use_container_width=True
+        )
+        
+        if result and "token" in result:
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = "Google User" # They are successfully authenticated!
+            st.rerun()
 
-# --- 3. ENFORCE LOGIN ---
+# ENFORCE LOGIN: Stop the app if not logged in
 if not st.session_state["logged_in"]:
     login_screen()
-    st.stop()  
-with st.sidebar:
-    st.success(f"👤 Logged in as: **{st.session_state['username']}**")
-    if st.button("Logout"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
-        st.rerun()
-    
+    st.stop()
     st.header("Settings")
     # --- Sidebar for Settings ---
     with st.sidebar:
@@ -183,8 +171,6 @@ with st.sidebar:
             st.error("Please upload an image first!")
         elif not topic:
             st.error("Please provide a topic for the AI!")
-        elif not api_key:
-            st.error("Please enter your Gemini API Key in the sidebar.")
         else:
             with st.spinner("Generating AI caption and rendering image..."):
                 try:
@@ -267,6 +253,7 @@ with st.sidebar:
                     st.error(f"An error occurred: {e}")
     
     
+
 
 
 
