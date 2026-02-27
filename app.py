@@ -7,35 +7,47 @@ import textwrap
 # --- Page Setup ---
 st.set_page_config(page_title="AI Poster Maker", layout="centered")
 st.title("🎨 AI Meme & Poster Creator")
-def check_password():
-    """Returns `True` if the user enters the correct password."""
+# You can add as many users as you want here
+USER_CREDENTIALS = {
+    "admin": "poster123",
+    "john_doe": "meme2026",
+    "guest": "guestpass"
+}
+# Initialize the session state for login
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "username" not in st.session_state:
+    st.session_state["username"] = ""
+
+def login_screen():
+    st.markdown("### 🔒 Welcome! Please log in.")
     
-    def password_entered():
-        # CHANGE "mysecretpassword" TO WHATEVER YOU WANT YOUR PASSCODE TO BE
-        if st.session_state["password"] == "mysecretpassword":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store the password in memory
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        # First time visiting the app: Show the password input
-        st.write("### 🔒 Please log in to continue")
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        return False
+    # We use st.form so the user can hit "Enter" to submit
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Login")
         
-    elif not st.session_state["password_correct"]:
-        # Wrong password entered: Show error and input again
-        st.write("### 🔒 Please log in to continue")
-        st.text_input("Password", type="password", on_change=password_entered, key="password")
-        st.error("😕 Password incorrect. Please try again.")
-        return False
-        
-    else:
-        # Password is correct!
-        return True
-if check_password():
+        if submit_button:
+            if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username
+                st.rerun()  # Instantly refresh the page to show the app
+            else:
+                st.error("😕 Invalid username or password. Please try again.")
 
+# --- 3. ENFORCE LOGIN ---
+if not st.session_state["logged_in"]:
+    login_screen()
+    st.stop()  
+with st.sidebar:
+    st.success(f"👤 Logged in as: **{st.session_state['username']}**")
+    if st.button("Logout"):
+        st.session_state["logged_in"] = False
+        st.session_state["username"] = ""
+        st.rerun()
+    
+    st.header("Settings")
     # --- Sidebar for Settings ---
     with st.sidebar:
         st.header("Settings")
@@ -221,6 +233,7 @@ if check_password():
                     st.error(f"An error occurred: {e}")
     
     
+
 
 
 
