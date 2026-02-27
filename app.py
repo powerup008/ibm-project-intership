@@ -8,7 +8,7 @@ from streamlit_oauth import OAuth2Component
 # --- Page Setup ---
 st.set_page_config(page_title="AI Poster Maker", layout="centered")
 st.title("🎨 AI Meme & Poster Creator")
-REDIRECT_URI = "https://AIMeme&PosterCreator.streamlit.app/" 
+REDIRECT_URI = "https://AIMeme&PosterCreator.streamlit.app" 
 
 try:
     CLIENT_ID = st.secrets["GOOGLE_CLIENT_ID"]
@@ -253,6 +253,7 @@ if not st.session_state["logged_in"]:
                     st.error(f"An error occurred: {e}")
     
     
+
 
 
 
