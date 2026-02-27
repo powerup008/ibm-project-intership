@@ -122,7 +122,7 @@ with st.sidebar:
     y_pos = st.slider("↕️ Vertical Position (%)", min_value=0, max_value=100, value=75, help="0 = Top, 100 = Bottom")
     text_size = st.slider("🔠 Text Size", min_value=1, max_value=20, value=8, help="Changes how large the font is relative to the image")
     # This adds a horizontal line to separate the settings from the reset
-    t.divider() 
+    st.divider() 
     if st.button("🔄 Reset App", use_container_width=True):
         # Clear the saved AI text from the session
         st.session_state["ai_text"] = ""
@@ -219,5 +219,6 @@ if uploaded_file and st.session_state["ai_text"]:
         
     except Exception as e:
         st.error(f"Image processing error: {e}")
+
 
 
