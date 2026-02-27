@@ -39,7 +39,6 @@ if check_password():
     # --- Sidebar for Settings ---
     with st.sidebar:
         st.header("Settings")
-        api_key = st.text_input("Gemini API Key", type="password", help="Get a free key from Google AI Studio")
         design_type = st.selectbox("Design Type", ["Meme", "Event Poster", "Social Media Slogan"])
         #New : AI Tone Selector
         ai_tone = st.selectbox("AI Tone", [
@@ -144,7 +143,7 @@ if check_password():
             with st.spinner("Generating AI caption and rendering image..."):
                 try:
                     # 1. Generate Caption using Gemini
-                    genai.configure(api_key=api_key)
+                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"]
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     prompt = f"Write a short, catchy, and punchy {design_type} text overlay about: {topic}. The tone of the text MUST BE: {ai_tone}. Return strictly the text, no quotes or extra formatting."
                     
@@ -222,4 +221,5 @@ if check_password():
                     st.error(f"An error occurred: {e}")
     
     
+
 
