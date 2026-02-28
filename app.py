@@ -3,10 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import google.generativeai as genai
 import io
 import textwrap
-
-# ==========================================
 # 1. PAGE SETUP & SESSION STATE
-# ==========================================
 st.set_page_config(page_title="AI Poster Maker", layout="centered")
 
 # Initialize session states for login and saving the AI text
@@ -15,11 +12,8 @@ if "logged_in" not in st.session_state:
 if "username" not in st.session_state:
     st.session_state["username"] = ""
 if "ai_text" not in st.session_state:
-    st.session_state["ai_text"] = "" # Saves the text so sliders don't reset it!
-
-# ==========================================
+    st.session_state["ai_text"] = "" 
 # 2. LOGIN SYSTEM LOGIC
-# ==========================================
 def login_screen():
     st.markdown("""
     <style>
@@ -59,11 +53,7 @@ def login_screen():
 if not st.session_state["logged_in"]:
     login_screen()
     st.stop()
-
-# ==========================================
 # 3. MAIN APP
-# ==========================================
-
 st.title("🎨 AI Meme & Poster Creator")
 
 # --- CSS Background & Fonts ---
@@ -124,9 +114,7 @@ with st.sidebar:
     # This adds a horizontal line to separate the settings from the reset
     st.divider() 
     if st.button("🔄 Reset App", use_container_width=True):
-        # Clear the saved AI text from the session
         st.session_state["ai_text"] = ""
-        # Rerun the app to refresh the screen
         st.rerun()
 
 # --- Interface ---
@@ -219,6 +207,7 @@ if uploaded_file and st.session_state["ai_text"]:
         
     except Exception as e:
         st.error(f"Image processing error: {e}")
+
 
 
 
