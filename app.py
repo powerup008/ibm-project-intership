@@ -3,211 +3,182 @@ from PIL import Image, ImageDraw, ImageFont
 import google.generativeai as genai
 import io
 import textwrap
+
+# ==========================================
 # 1. PAGE SETUP & SESSION STATE
-st.set_page_config(page_title="AI Poster Maker", layout="centered")
+# ==========================================
+st.set_page_config(page_title="AI Poster Maker", page_icon="🎨", layout="centered")
 
-# Initialize session states for login and saving the AI text
+# Initialize session state variables cleanly
 if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
-if "username" not in st.session_state:
-    st.session_state["username"] = ""
-if "ai_text" not in st.session_state:
-    st.session_state["ai_text"] = "" 
-# 2. LOGIN SYSTEM LOGIC
-def login_screen():
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { display: none; }
-    [data-testid="stForm"] {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 15px;
-        padding: 2rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.session_state.ai_caption = ""
 
-    st.write("")
-    st.write("")
+# ==========================================
+# 2. HELPER FUNCTIONS
+# ==========================================
+def generate_caption(topic, design_type, tone):
+    """Fetches a caption from the Gemini API."""
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel('gemini-2.5-flash')
     
-    col1, col2, col3 = st.columns([1, 1.5, 1])
-    with col2:
-        st.markdown("<h2 style='text-align: center;'>🔒 Welcome!</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #aaaaaa;'>Please enter a nickname to start creating.</p>", unsafe_allow_html=True)
-        st.write("")
-        
-        with st.form("login_form"):
-            username = st.text_input("Choose a Username", placeholder="e.g., GuestUser")
-            password = st.text_input("Enter any Password", type="password", placeholder="••••••••")
-            submit_button = st.form_submit_button("Enter App", use_container_width=True)
-            
-            if submit_button:
-                if username.strip() != "" and password.strip() != "":
-                    st.session_state["logged_in"] = True
-                    st.session_state["username"] = username.strip()
-                    st.rerun()
-                else:
-                    st.error("😕 Please type a username and password to continue.")
+    prompt = (f"Write a short, catchy, and punchy {design_type} text overlay about: {topic}. "
+              f"The tone MUST BE: {tone}. Return strictly the text, no quotes or extra formatting.")
+    
+    response = model.generate_content(prompt)
+    return response.text.strip()
 
-if not st.session_state["logged_in"]:
+def draw_text_on_image(image_file, text, font_style, text_color, x_pct, y_pct, size_pct):
+    """Handles all Pillow image manipulation to keep the main UI code clean."""
+    image = Image.open(image_file).convert("RGBA")
+    draw = ImageDraw.Draw(image)
+    
+    # Font setup (Note: ensure you have these .ttf files in your project folder)
+    font_size = int(image.height * (size_pct / 100.0))
+    font_files = {
+        "Meme": "impact.ttf",
+        "Modern": "roboto.ttf",
+        "Elegant": "playfair.ttf"
+    }
+    
+    try:
+        font = ImageFont.truetype(font_files.get(font_style, "impact.ttf"), size=font_size)
+    except IOError:
+        font = ImageFont.load_default() # Fallback if font files are missing
+
+    # Calculate text wrapping
+    char_width = font.getlength("A") if hasattr(font, 'getlength') else 10
+    max_chars = int((image.width * 0.9) / char_width)
+    wrapped_text = textwrap.wrap(text, width=max_chars)
+    
+    # Calculate starting Y position
+    current_y = image.height * (y_pct / 100.0)
+    shadow_offset = int(font_size * 0.06)
+    
+    for line in wrapped_text:
+        # Get line dimensions
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_width = bbox[2] - bbox[0]
+        line_height = bbox[3] - bbox[1]
+        
+        # Calculate X position
+        x_pos = (image.width - line_width) * (x_pct / 100.0)
+        
+        # Draw text with simple shadow/stroke
+        if font_style == "Meme":
+            # Thick black outline for memes
+            draw.text((x_pos, current_y), line, font=font, fill=text_color, 
+                      stroke_width=int(font_size * 0.05), stroke_fill="black")
+        else:
+            # Soft drop shadow for modern/elegant
+            draw.text((x_pos + shadow_offset, current_y + shadow_offset), line, 
+                      font=font, fill=(0, 0, 0, 150))
+            draw.text((x_pos, current_y), line, font=font, fill=text_color)
+        
+        current_y += line_height + 15
+        
+    return image.convert("RGB")
+
+# ==========================================
+# 3. LOGIN SCREEN
+# ==========================================
+def login_screen():
+    st.title("🔒 Welcome to Poster Maker")
+    st.write("Please enter a nickname to start creating.")
+    
+    with st.form("login_form"):
+        username = st.text_input("Username", placeholder="e.g., GuestUser")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        
+        if st.form_submit_button("Log In"):
+            if username and password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("Please enter both a username and password.")
+
+# Block access if not logged in
+if not st.session_state.logged_in:
     login_screen()
     st.stop()
-# 3. MAIN APP
+
+# ==========================================
+# 4. MAIN APPLICATION
+# ==========================================
 st.title("🎨 AI Meme & Poster Creator")
+st.write("Upload a background, describe your topic, and let the AI write your caption!")
 
-# --- CSS Background & Fonts ---
-page_bg_css = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;600;700&display=swap');
-
-html, body, h1, h2, h3, h4, h5, h6, p, label, span, .stMarkdown { font-family: 'Roboto', sans-serif; }
-.material-symbols-rounded { font-family: 'Material Symbols Rounded' !important; }
-.stApp {
-    background: linear-gradient(-45deg, #000000, #1a1a1a, #2b2b2b, #0a0a0a);
-    background-size: 400% 400%;
-    animation: gradientBG 15s ease infinite;
-}
-@keyframes gradientBG {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-h2, h3, p, label, .stMarkdown { color: #ffffff !important; }
-h1 { color: #ffffff !important; animation: dropIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
-@keyframes dropIn {
-    0% { opacity: 0; transform: translateY(-80px); }
-    60% { opacity: 1; transform: translateY(10px); }
-    80% { transform: translateY(-5px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-[data-testid="stFileUploadDropzone"] {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-</style>
-"""
-st.markdown(page_bg_css, unsafe_allow_html=True)
-
-# --- Sidebar Controls ---
+# --- Sidebar ---
 with st.sidebar:
-    st.success(f"👤 Logged in as: **{st.session_state['username']}**")
-    if st.button("Logout"):
-        st.session_state["logged_in"] = False
-        st.session_state["username"] = ""
-        st.session_state["ai_text"] = "" # Clear text on logout
+    st.success(f"👤 Logged in as: **{st.session_state.username}**")
+    if st.button("Logout", use_container_width=True):
+        st.session_state.clear()
         st.rerun()
         
-    st.header("⚙️ AI Settings")
+    st.header("⚙️ Settings")
     design_type = st.selectbox("Design Type", ["Meme", "Event Poster", "Social Media Slogan"])
-    ai_tone = st.selectbox("AI Tone", ["Funny & Humorous", "Sarcastic & Snarky", "Professional & Clean", "Inspirational & Epic", "Gen-Z Slang"])
+    ai_tone = st.selectbox("AI Tone", ["Funny & Humorous", "Sarcastic", "Professional", "Gen-Z Slang"])
     
     st.header("🎨 Design Controls")
-    font_style = st.selectbox("Typography Style", ["Meme (Impact, Thick Outline)", "Modern (Clean, Bold)", "Elegant (Serif, Classy)"])
+    font_style = st.selectbox("Typography", ["Meme", "Modern", "Elegant"])
     text_color = st.color_picker("Text Color", "#FFFFFF")
     
-    # NEW: Sliders for Positioning and Size
-    st.subheader("📍 Text Position & Size")
-    x_pos = st.slider("↔️ Horizontal Position (%)", min_value=0, max_value=100, value=50, help="0 = Left edge, 50 = Center, 100 = Right edge")
-    y_pos = st.slider("↕️ Vertical Position (%)", min_value=0, max_value=100, value=75, help="0 = Top, 100 = Bottom")
-    text_size = st.slider("🔠 Text Size", min_value=1, max_value=20, value=8, help="Changes how large the font is relative to the image")
-    # This adds a horizontal line to separate the settings from the reset
-    st.divider() 
-    if st.button("🔄 Reset App", use_container_width=True):
-        st.session_state["ai_text"] = ""
+    st.subheader("📍 Position & Size")
+    x_pos = st.slider("↔️ Horizontal (%)", 0, 100, 50)
+    y_pos = st.slider("↕️ Vertical (%)", 0, 100, 75)
+    text_size = st.slider("🔠 Text Size", 1, 20, 8)
+    
+    st.divider()
+    if st.button("🔄 Reset Image", use_container_width=True):
+        st.session_state.ai_caption = ""
         st.rerun()
 
-# --- Interface ---
-st.write("Upload a background, tell the AI what it's about, and click Generate. Then use the sidebar to move the text!")
-
-uploaded_file = st.file_uploader("1. Upload a background image (JPG/PNG)", type=["jpg", "jpeg", "png"])
+# --- Main Work Area ---
+uploaded_file = st.file_uploader("1. Upload a background image", type=["jpg", "jpeg", "png"])
 topic = st.text_input("2. What is this about?", placeholder="e.g., Surviving finals week on 2 hours of sleep")
 
-# Trigger Gemini AI
-if st.button("✨ Generate AI Caption"):
-    if not uploaded_file:
-        st.error("Please upload an image first!")
-    elif not topic:
-        st.error("Please provide a topic for the AI!")
+# Generate Caption Button
+if st.button("✨ Generate AI Caption", type="primary"):
+    if not uploaded_file or not topic:
+        st.warning("Please upload an image and provide a topic first.")
     else:
         with st.spinner("Writing the perfect caption..."):
             try:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                prompt = f"Write a short, catchy, and punchy {design_type} text overlay about: {topic}. The tone MUST BE: {ai_tone}. Return strictly the text, no quotes or extra formatting."
-                response = model.generate_content(prompt)
-                
-                # Save the text into memory so it doesn't disappear when you move a slider!
-                st.session_state["ai_text"] = response.text.strip().upper() if "Meme" in font_style else response.text.strip()
+                caption = generate_caption(topic, design_type, ai_tone)
+                # Auto-uppercase for memes
+                st.session_state.ai_caption = caption.upper() if font_style == "Meme" else caption
             except Exception as e:
-                st.error(f"API Error: {e}")
+                st.error(f"Failed to generate text: {e}")
 
-# Render the Image (This runs instantly every time you move a slider)
-if uploaded_file and st.session_state["ai_text"]:
+# Render Final Image
+if uploaded_file and st.session_state.ai_caption:
     try:
-        image = Image.open(uploaded_file).convert("RGBA")
-        draw = ImageDraw.Draw(image)
+        final_image = draw_text_on_image(
+            image_file=uploaded_file,
+            text=st.session_state.ai_caption,
+            font_style=font_style,
+            text_color=text_color,
+            x_pct=x_pos,
+            y_pct=y_pos,
+            size_pct=text_size
+        )
         
-        # Calculate size based on the new Size Slider
-        font_size = int(image.height * (text_size / 100.0))
+        st.info(f"**Caption:** {st.session_state.ai_caption}")
+        st.image(final_image, caption="Your Generated Design", use_container_width=True)
         
-        font_mapping = {
-            "Meme (Impact, Thick Outline)": "impact.ttf",
-            "Modern (Clean, Bold)": "roboto.ttf",
-            "Elegant (Serif, Classy)": "playfair.ttf"
-        }
-        selected_font_file = font_mapping[font_style]
-
-        try:
-            font = ImageFont.truetype(selected_font_file, size=font_size) 
-        except IOError:
-            font = ImageFont.load_default()
-
-        # Wrap text
-        char_width = font.getlength("A") if hasattr(font, 'getlength') else 10
-        max_width_chars = int((image.width * 0.9) / char_width) 
-        wrapped_text = textwrap.wrap(st.session_state["ai_text"], width=max_width_chars)
-        
-        # NEW: Start height is now controlled by the Vertical Slider
-        current_h = image.height * (y_pos / 100.0) 
-        
-        for line in wrapped_text:
-            bbox = draw.textbbox((0, 0), line, font=font)
-            w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-            
-            # NEW: X position is now controlled by the Horizontal Slider
-            x = (image.width - w) * (x_pos / 100.0)
-            
-            shadow_offset = int(font_size * 0.06)
-            
-            if "Meme" in font_style:
-                draw.text((x + shadow_offset, current_h + shadow_offset), line, font=font, fill=(0, 0, 0, 200))
-                draw.text((x, current_h), line, font=font, fill=text_color, stroke_width=int(font_size * 0.05), stroke_fill="black")
-            else:
-                draw.text((x + (shadow_offset//2), current_h + (shadow_offset//2)), line, font=font, fill=(0, 0, 0, 150))
-                draw.text((x, current_h), line, font=font, fill=text_color)
-            
-            current_h += h + 15
-
-        st.success(f"**AI Generated Caption:** {st.session_state['ai_text']}")
-        st.image(image, caption="Your Generated Design", use_container_width=True)
-        
-        # Prepare Image for Download
+        # Prepare for download
         buf = io.BytesIO()
-        final_image = image.convert("RGB")
         final_image.save(buf, format="JPEG")
-        byte_im = buf.getvalue()
         
         st.download_button(
             label="⬇️ Download Final Design",
-            data=byte_im,
-            file_name="ai_custom_poster.jpg",
-            mime="image/jpeg"
+            data=buf.getvalue(),
+            file_name="ai_poster.jpg",
+            mime="image/jpeg",
+            type="primary"
         )
         
     except Exception as e:
-        st.error(f"Image processing error: {e}")
-
-
-
-
+        st.error(f"Error drawing image: {e}")
